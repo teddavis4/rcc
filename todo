@@ -1,5 +1,7 @@
 show the old score (if any) when changing the score
-    a list you can download (What format? I'll show you the raw text file
-    in a followup email)
+    a list you can download containing users
     show games in a table, vote for multiple games (?vote)
-    fix duplicate users
+    fix duplicate users error
+    View standings:
+	show in a table of games, with the user guess, and score
+	if you click on the game, it shows everyone
