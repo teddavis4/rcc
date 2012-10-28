@@ -1,3 +1,10 @@
+<style type='text/css'>
+    .bigtextbox {
+	width  80px;
+	height = 24px;
+    }
+</style>
+
 <hr>
 <h2> Confirm new users </h2>
 <form method='post'>
@@ -74,4 +81,11 @@
     <input type='text' value='0' name='ku' />
     <input type='submit' value='Submit' />
 </form>
-
+<hr>
+<h2> Change the Message Of The Day </h2>
+<form method='post'>
+    <input type='hidden' value='writeMOTD' name='cmd' />
+    <textarea name='motd' cols='80' rows='24'>{{ motd }}</textarea>
+    <br/>
+    <input type='submit' value='change motd' />
+</form>

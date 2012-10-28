@@ -5,7 +5,14 @@
 	</title>
     </head>
     <body>
-	<form action='/rcc/index.cgi?submitVote' method='post'>
+	<form method='post'>
+	    <table border=1>
+		<tr>
+		    <th>Opponent</th>
+		    <th>Date</th>
+		    <th>Opponent score guess</th>
+		    <th>Kansas score guess</th>
+		</tr>
 	    <select id='game' name='game'>
 		{% for i in games %}
 		<option>{{i}}</option>
