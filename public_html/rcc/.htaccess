@@ -1,0 +1,5 @@
+AuthType Basic
+AuthName "RockChalkChallenge"
+AuthUserFile /Applications/MAMP/htdocs/.htpasswd
+Require valid-user
+

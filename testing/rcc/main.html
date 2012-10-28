@@ -1,0 +1,36 @@
+<table width='100%'>
+    <tr>
+	<td align='left' width='90%'>
+	    <h2> <a href='/rcc/index.cgi'>Rock Chalk Challenge 2012-2013</a></h2>
+	</td>
+	<td align='right' width='10%'>
+	    Logged in as: {{user}}
+	    <a href='?prefs'>Preferences</a>
+	    {% if admin %}
+	    <a href='?admin'>admin panel</a>
+	    {% endif %}
+	</td>
+    </tr>
+</table>
+<table width='100%'>
+    <tr>
+	<td>
+	    <center>
+	    <a href='?vote'>Enter scores</a>
+	    </center>
+	</td>
+	<td>
+	    <center>
+	    <a href='mailto:corpusjayhawk@gmail.com'>Email Commissioner</a>
+	    </center>
+	</td>
+	<td>
+	    <center>
+	    <a href='?standings'>View Standings</a>
+	    </center>
+	</td>
+    </tr>
+</table>
+<br>
+<pre>{{ motd }}</pre>
+<br><br>

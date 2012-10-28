@@ -1,0 +1,21 @@
+<h1>Standings for {{ game }}</h1>
+<table width='100%'>
+    <tr>
+	<th align='right'>Handle</th>
+	<th align='right'>KU Guess</th>
+	<th align='right'>Opponent Guess</th>
+	<th align='right'>KU Actual Score</th>
+	<th align='right'>Oppenent Actual Score</th>
+	<th align='right'>Adjusted Score</th>
+    </tr>
+    {% for player in players.keys() %}
+    <tr>
+	<td align='right'>{{ user }}</td>
+	<td align='right'>{{ players[player]['kuGuess'] }}</td>
+	<td align='right'>{{ players[player]['oppGuess'] }}</td>
+	<td align='right'>{{ kuActual }}</td>
+	<td align='right'>{{ oppActual }}</td>
+	<td align='right'>{{ players[player]['adjScore'] }}</td>
+    </tr>
+    {% endfor %}
+</table>

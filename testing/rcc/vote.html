@@ -1,0 +1,30 @@
+<html>
+    <head>
+	<title>
+	    Enter game scores
+	</title>
+    </head>
+    <body>
+	<form method='post'>
+	    <table border=1>
+		<tr>
+		    <th>Opponent</th>
+		    <th>Date</th>
+		    <th>Opponent score guess</th>
+		    <th>Kansas score guess</th>
+		</tr>
+	    <select id='game' name='game'>
+		{% for i in games %}
+		<option>{{i}}</option>
+		{% endfor %}
+	    </select>
+	    <br/>
+	    Opponent:&nbsp;
+	    <input type='text' value='0' name='ku'/>
+	    <br/>
+	    Kansas:&nbsp;
+	    <input type='text' value='0' name='opp'/>
+	    <input type='submit' value='Submit'/>
+	</form>
+    </body>
+</html>

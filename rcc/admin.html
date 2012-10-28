@@ -1,0 +1,77 @@
+<hr>
+<h2> Confirm new users </h2>
+<form method='post'>
+    <input type='hidden' value='registerUser' name='cmd'/>
+    <table width='100%'>
+	{% for newuser in newusers.keys() %}
+	<tr>
+	    <td>
+		<input type='checkbox' name='newuser' value='{{ newuser }}'/>
+	    </td>
+	    <td>
+		{{ newuser }}
+	    </td>
+	    <td>
+		{{ newusers[newuser]['email'] }}
+	    </td>
+	    <td>
+		{{ '<br/>'.join(newusers[newuser]['address']) }}
+	    </td>
+	{% endfor %}
+	</tr>
+    </table>
+    <input type='submit' value='Activate!'/>
+</form>
+<h2> Change player password </h2>
+<form method='post'>
+    <input type='hidden' value='changePassword' name='cmd'/>
+    <select id='cuser' name='cuser'>
+    {% for user in userlist %}
+	<option>{{ user }}</option>
+    {% endfor %}
+    </select>
+    <br/>
+    New password:
+    <input type='password' name='changePassword' />
+    <input type='submit' value='Submit' />
+</form>
+<hr>
+<h2> Enter game scores </h2>
+<form method='post'>
+    <input type='hidden' value='enterScores' name='cmd' />
+    <select id='game' name='game'>
+    {% for game in gamelist %}
+	<option>{{ game }}</option>
+    {% endfor %}
+    </select>
+    <br/>
+    Opponent: 
+    <input type='text' value='0' name='opp' />
+    <br/>
+    Kansas: 
+    <input type='text' value='0' name='ku' />
+    <input type='submit' value='Submit' />
+</form>
+<hr>
+<h2> Change player guesses </h2>
+<form method='post'>
+    <input type='hidden' value='changeScores' name='cmd' />
+    <select id='user' name='user'>
+    {% for user in userlist %}
+	<option>{{ user }}</option>
+    {% endfor %}
+    </select>
+    <select id='game' name='game'>
+    {% for game in gamelist %}
+	<option>{{ game }}</option>
+    {% endfor %}
+    </select>
+    <br/>
+    Opponent: 
+    <input type='text' value='0' name='opp' />
+    <br/>
+    Kansas: 
+    <input type='text' value='0' name='ku' />
+    <input type='submit' value='Submit' />
+</form>
+
