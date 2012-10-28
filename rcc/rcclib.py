@@ -163,7 +163,7 @@ def render_viewStandings(user):
     print str(template.render(**tempVars))
 
 def render_prefs(user):
-    form =cgi.FieldStorage()
+    form = cgi.FieldStorage()
     template = Template(open('prefs.html', 'r').read())
     print str(template.render())
 
@@ -182,7 +182,7 @@ def render_prefs(user):
 
 	if changePassword == password2:
 	    try:
-		subprocess.check_call('htpasswd -b /home/thedav4/mooksinboots.com/.htpasswd %s %s' % ( changeUser, changePassword), shell=True)
+		subprocess.check_call('htpasswd -b /home/thedav4/kurcc.com/.htpasswd %s %s' % ( changeUser, changePassword), shell=True)
 		print "Password Changed"
 	    except:
 		print "<pre>%s</pre>"%(cgi.escape(traceback.format_exc()))
@@ -256,7 +256,7 @@ def render_admin(user):
 	    changePassword = changePassword.replace(' ','\\ ')
 
 	    try:
-		subprocess.check_call('htpasswd -b /home/thedav4/mooksinboots.com/.htpasswd %s %s' % ( changeUser, changePassword), shell=True)
+		subprocess.check_call('htpasswd -b /home/thedav4/kurcc.com/.htpasswd %s %s' % ( changeUser, changePassword), shell=True)
 		print "Password Changed"
 	    except:
 		print "<pre>%s</pre>"%(cgi.escape(traceback.format_exc()))

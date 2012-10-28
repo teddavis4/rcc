@@ -23,7 +23,11 @@ template = Template(file('main.html', 'r').read())
 motd = rcclib.getMOTD()
 if qstring:
     motd = ''
-print str(template.render(user=user, admin=False, motd=motd))
+admin = False
+if user in rcclib.adminList:
+    admin = True
+
+print str(template.render(user=user, admin=admin, motd=motd))
 
 userlist = rcclib.userlist
 

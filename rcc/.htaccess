@@ -1,5 +1,5 @@
 AuthType Basic
 AuthName "RockChalkChallenge"
-AuthUserFile /home/thedav4/mooksinboots.com/.htpasswd
+AuthUserFile /home/thedav4/kurcc.com/.htpasswd
 Require valid-user
 
