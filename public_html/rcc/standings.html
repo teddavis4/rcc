@@ -1,9 +1,0 @@
-<form action='/rcc/index.cgi?viewStandings' method='post'>
-    <select name='game' id='game'>
-	{% for i in gamelist.keys() %}
-	<option>{{ i }}</option>
-	{% endfor %}
-    </select>
-    <br/>
-    <input type='submit' value='View standings'>
-</form>
