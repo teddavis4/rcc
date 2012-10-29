@@ -12,30 +12,34 @@ with open('../.htpasswd', 'r') as f:
 	userlist.append(u.split(':')[0])
 del u, f
 
-def getGamelist(exp=False, over=False):
+def getGamelist(exp=False, over=False, gameOnly=False):
     """
     Return a list of games with their dates and times
 
     exp -- If set to true, skips games that have passed (False)
     over -- If set to true, only adds games which 4 hours have elapsed
 	    since their start
+    gameOnly -- Only return the games, no times or dates
     """
 
     gamelist = []
-    with open('/usr/share/rcc/.gamelist.test') as f:
+    with open('/usr/share/rcc/.gamelist.txt') as f:
 	for i in f:
 	    opp = i.split(';')[0]
-	    date = i.split(';')[1]
+	    rdate = i.split(';')[1]
+	    date = " - %s" % i.split(';')[1]
+	    if gameOnly:
+		date = ''
 	    if not exp and not over:
-		gamelist.append('%s - %s'%(opp, date))
+		gamelist.append('%s%s'%(opp, date))
 	    elif exp:
 		form = "%m/%d/%y %H:%M\n"
-		edate = time.mktime(time.strptime(date, form))
+		edate = time.mktime(time.strptime(rdate, form))
 		if time.time() < edate:
 		    gamelist.append('%s - %s'%(opp, date))
 	    elif over:
 		form = "%m/%d/%y %H:%M\n"
-		edate = time.mktime(time.strptime(date, form))
+		edate = time.mktime(time.strptime(rdate, form))
 		edate += (3600*4)
 		if time.time() > edate:
 		    gamelist.append('%s - %s'%(opp, date))
@@ -88,7 +92,7 @@ def render_submitVote(user):
 	else:
 	    team = False
 	    index = 0
-	    with open('/usr/share/rcc/.scores.test', 'r') as f:
+	    with open('/usr/share/rcc/.scores', 'r') as f:
 		lines = f.readlines()
 	    for line in lines:
 		lineNum = lines.index(line)
@@ -105,7 +109,7 @@ def render_submitVote(user):
 			lines.insert(lineNum, '%s:%s,%s\n'%(user, ku,
 			    opp))
 			break
-	    with open('/usr/share/rcc/.scores.test', 'w') as f:
+	    with open('/usr/share/rcc/.scores', 'w') as f:
 		for line in lines:
 		    f.write("%s" % line)
 	    print "Scores collected, thank you"
@@ -132,7 +136,7 @@ def render_viewStandings(user):
 		tempVars['kuActual'] = int(line[1].split(',')[0])
 		tempVars['oppActual'] = int(line[1].split(',')[1])
     tempVars['diff'] = abs(tempVars['kuActual'] - tempVars['oppActual'])
-    with open('/usr/share/rcc/.scores.test', 'r') as f:
+    with open('/usr/share/rcc/.scores', 'r') as f:
 	lines = f.readlines()
 	players = {}
 	for line in lines:
@@ -284,7 +288,7 @@ def render_admin(user):
 	    opp = form['opp'].value
 	    game = form['game'].value
 	    team = False
-	    with open('/usr/share/rcc/.scores.test', 'r') as f:
+	    with open('/usr/share/rcc/.scores', 'r') as f:
 		lines = f.readlines()
 	    for line in lines:
 		lineNum = lines.index(line)
@@ -302,7 +306,7 @@ def render_admin(user):
 			lines.insert(lineNum, '%s:%s,%s\n'%(changeUser, ku,
 			    opp))
 			break
-	    with open('/usr/share/rcc/.scores.test', 'w') as f:
+	    with open('/usr/share/rcc/.scores', 'w') as f:
 		for line in lines:
 		    f.write("%s" % line)
 	    print "Scores collected, thank you"
@@ -322,8 +326,74 @@ def render_userlist(user):
     template = Template(file('players.html', 'r').read())
     print str(template.render(players=getUserlist()))
 
+def render_groupStats(user):
+    pass
+
+def render_stats(user):
+    t = {}
+    t['userGames'] = getUserGames(user)
+    t['games'] = getGamelist(gameOnly=True)
+    t['numGames'] = len(t['games'])
+    t['numPlayed'] = len(t['userGames'])
+    t['playPerc'] = "%0.2f" % (((0.00+t['numPlayed'])/t['numGames'])*100)
+    t['overallScore'] = getOverallScore(user)
+    for game in t['userGames']:
+	if game in t['games']:
+	    t['games'].pop(t['games'].index(game))
+    template = Template(file('playerStats.html', 'r').read())
+    print "<table width='100%' border=1>"
+    print str(template.render(user=user, **t))
+    print "</table>"
+
 def render_(user):
     pass
 
 def deliverContent(qstring, user):
     exec('render_%s(user)' % qstring)
+
+def getUserGames(userToPoll):
+    stats = {}
+    team = None
+    with open('/usr/share/rcc/.scores', 'r') as f:
+	lines = f.readlines()
+    for line in lines:
+	lineNum = lines.index(line)
+	newScore = False
+	if line.startswith('['):
+	    team = line.strip('[]\n')
+	elif line.startswith(userToPoll) and team:
+	    scores = line.split(':')[1]
+	    ku = scores.split(',')[0]
+	    opp = scores.split(',')[1]
+	    stats[team] = '%s,%s' % (ku, opp)
+    return stats
+
+def getOverallScore(u):
+    games = getGamelist(gameOnly=True, over=True)
+    kuActual=0
+    oppActual=0
+    overallScore = 0
+    for game in games:
+	with open('/usr/share/rcc/.actualScores.txt', 'r') as f:
+	    for line in f.readlines():
+		line = line.split(':')
+		team = line[0]
+		if team == game:
+		    kuActual = int(line[1].split(',')[0])
+		    oppActual = int(line[1].split(',')[1])
+	diff = abs(kuActual - oppActual)
+	with open('/usr/share/rcc/.scores', 'r') as f:
+	    lines = f.readlines()
+	for line in lines:
+	    if line.startswith('[%s]'%game):
+		team = True
+	    elif line.startswith('['):
+		team = False
+	    elif team == True:
+		nline = line.split(':')
+		kuGuess = int(nline[1].split(',')[0])
+		oppGuess = int(nline[1].split(',')[1])
+		playerDiff = abs(kuGuess - oppGuess)
+		overallScore += (100-abs((kuActual+oppActual)-(kuGuess+oppGuess))-abs(diff+playerDiff))
+		break
+    return overallScore
