@@ -3,27 +3,40 @@
 	<title>
 	    Enter game scores
 	</title>
+	<script src="/sorttable.js"></script>
     </head>
     <body>
 	<form method='post'>
-	    <table border=1>
+	    <input type='submit' value='Submit'/>
+	    <table border=1 class='sortable'>
 		<tr>
 		    <th>Opponent</th>
 		    <th>Date</th>
 		    <th>Opponent score guess</th>
 		    <th>Kansas score guess</th>
 		</tr>
-	    <select id='game' name='game'>
-		{% for i in games %}
-		<option>{{i}}</option>
+		{% for time in gameInfo.keys() %}
+		<tr>
+		    <td>{{ gameInfo[time] }}</td>
+		    <td>{{ time }}</td>
+		    {% if gameInfo[time] not in expGames %}
+		    <td>
+			{{ userScores[gameInfo[time]][0] }}
+		    </td>
+		    <td>
+			{{ userScores[gameInfo[time]][1] }}
+		    </td>
+		    {% else %}
+		    <td>
+			<input type='text' value='{{userScores[gameInfo[time]][0]}}' name='{{ gameInfo[time] }} - {{ time }}'/>
+		    </td>
+		    <td>
+			<input type='text' value='{{userScores[gameInfo[time]][1]}}' name='{{ gameInfo[time] }} - {{ time }} - ku'/>
+		    </td>
+		    {% endif %}
+		</tr>
 		{% endfor %}
-	    </select>
-	    <br/>
-	    Opponent:&nbsp;
-	    <input type='text' value='0' name='opp'/>
-	    <br/>
-	    Kansas:&nbsp;
-	    <input type='text' value='0' name='ku'/>
+	    </table>
 	    <input type='submit' value='Submit'/>
 	</form>
     </body>

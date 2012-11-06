@@ -12,7 +12,13 @@ with open('../.htpasswd', 'r') as f:
 	userlist.append(u.split(':')[0])
 del u, f
 
-def getGamelist(exp=False, over=False, gameOnly=False):
+def getDateEpoch(inDate):
+    form = "%m/%d/%y %H:%M"
+    date = time.mktime(time.strptime(inDate, form))
+    return date
+
+
+def getGamelist(exp=False, over=False, gameOnly=False, gsplit=False):
     """
     Return a list of games with their dates and times
 
@@ -20,30 +26,32 @@ def getGamelist(exp=False, over=False, gameOnly=False):
     over -- If set to true, only adds games which 4 hours have elapsed
 	    since their start
     gameOnly -- Only return the games, no times or dates
+    gsplit -- Split the opposing team and time into a dictionary
     """
 
     gamelist = []
+    if gsplit:
+	gamelist = {}
     with open('/usr/share/rcc/.gamelist.txt') as f:
 	for i in f:
-	    opp = i.split(';')[0]
-	    rdate = i.split(';')[1]
-	    date = " - %s" % i.split(';')[1]
+	    opp = i.split(';')[0].strip()
+	    rdate = i.split(';')[1].strip()
+	    date = " - %s" % rdate
 	    if gameOnly:
 		date = ''
-	    if not exp and not over:
-		gamelist.append('%s%s'%(opp, date))
-	    elif exp:
-		form = "%m/%d/%y %H:%M\n"
-		edate = time.mktime(time.strptime(rdate, form))
+	    if exp:
+		edate = getDateEpoch(rdate)
 		if time.time() < edate:
-		    gamelist.append('%s - %s'%(opp, date))
+		    gamelist.append('%s%s'%(opp, date))
 	    elif over:
-		form = "%m/%d/%y %H:%M\n"
-		edate = time.mktime(time.strptime(rdate, form))
+		edate = getDateEpoch(rdate)
 		edate += (3600*4)
 		if time.time() > edate:
-		    gamelist.append('%s - %s'%(opp, date))
-
+		    gamelist.append('%s%s'%(opp, date))
+	    elif gsplit:
+		gamelist[rdate] = opp
+	    else:
+		gamelist.append('%s%s'%(opp, date))
     return gamelist
 
 def getUserlist(new=False):
@@ -74,45 +82,49 @@ def getMOTD():
 	return f.read()
 
 def render_vote(user):
-    template = Template(file('vote.html', 'r').read())
-    gamelist = {}
-    print str(template.render(games=getGamelist(exp=True)))
-
-def render_submitVote(user):
-    voteTime = time.time()
-    form = cgi.FieldStorage()
-    if "ku" not in form or "opp" not in form:
-	print "Please enter a value for both teams scores"
-    if "ku" in form and "opp" in form:
-	opp = form['opp'].value
-	ku = form['ku'].value
-	game = form['game'].value
-	if ku == '0' or opp == '0':
-	    print "<p>Please enter scores over 0"
-	else:
-	    team = False
-	    index = 0
-	    with open('/usr/share/rcc/.scores', 'r') as f:
-		lines = f.readlines()
-	    for line in lines:
-		lineNum = lines.index(line)
-		newScore = False
-		if line.startswith('[%s]' % game):
-		    team = True
-		elif line.startswith(user) and team:
+    try:
+	voteTime = time.time()
+	form = cgi.FieldStorage()
+	for game in getGamelist():
+	    game = game.strip()
+	    opp = form[game].value
+	    ku = form['%s - ku'%game].value
+	    if ku == '0' or opp == '0' or ku == '' or opp == '':
+		continue
+	    else:
+		team = False
+		with open('/usr/share/rcc/.scores', 'r') as f:
+		    lines = f.readlines()
+		for line in lines:
+		    lineNum = lines.index(line)
+		    newScore = False
+		    if line.startswith('[%s]' % game.split(' - ')[0]):
+			team = True
+		    elif line.startswith(user) and team:
 			newScore = True
 			lines[lineNum] = "%s:%s,%s\n" % (user, ku,
 				opp)
 			break
-		elif line[0] == '[' and team:
-		    if not newScore:
-			lines.insert(lineNum, '%s:%s,%s\n'%(user, ku,
-			    opp))
-			break
-	    with open('/usr/share/rcc/.scores', 'w') as f:
-		for line in lines:
-		    f.write("%s" % line)
-	    print "Scores collected, thank you"
+		    elif line[0] == '[' and team:
+			if not newScore:
+			    lines.insert(lineNum, '%s:%s,%s\n'%(user, ku,
+				opp))
+			    break
+		with open('/usr/share/rcc/.scores', 'w') as f:
+		    for line in lines:
+			f.write("%s" % line)
+		print "Scores collected: %s KU: %s, %s: %s<br/>"%(game,
+			ku, game.split(' - ')[0].split(' ', 1)[1], opp)
+    except KeyError:
+	print "Click 'Opponent' to sort"
+	template = Template(file('vote.html', 'r').read())
+	print str(template.render(userScores=getUserGames(user,
+	    null=True),gameInfo=getGamelist(gsplit=True),
+	    expGames=getGamelist(exp=True, gameOnly=True)))
+    except Exception, e:
+	print '<pre>'
+	print traceback.format_exc()
+	print '</pre>'
 
 def render_standings(user):
     template = Template(file('standings.html', 'r').read())
@@ -153,14 +165,10 @@ def render_viewStandings(user):
 		players[player]['diff'] = \
 			abs(players[player]['kuGuess'] \
 			- players[player]['oppGuess'])
-		players[player]['adjScore'] = ( \
-			100 \
-			- abs( \
-			(tempVars['kuActual'] + tempVars['oppActual']) \
-			- (players[player]['kuGuess'] + players[player]['oppGuess']) \
-			) \
-			- abs(tempVars['diff'] + players[player]['diff']) \
-			)
+		players[player]['adjScore'] = 100 -  abs( \
+			abs(tempVars['kuActual'] - players[player]['kuGuess']) \
+			- abs(tempVars['oppActual'] - players[player]['oppGuess']) \
+			- abs(tempVars['diff'] + players[player]['diff']))
 	    tempVars['players'] = players
 
     template = Template(file('viewStandings.html', 'r').read())
@@ -351,7 +359,7 @@ def render_(user):
 def deliverContent(qstring, user):
     exec('render_%s(user)' % qstring)
 
-def getUserGames(userToPoll):
+def getUserGames(userToPoll, null=False):
     stats = {}
     team = None
     with open('/usr/share/rcc/.scores', 'r') as f:
@@ -365,7 +373,12 @@ def getUserGames(userToPoll):
 	    scores = line.split(':')[1]
 	    ku = scores.split(',')[0]
 	    opp = scores.split(',')[1]
-	    stats[team] = '%s,%s' % (ku, opp)
+	    stats[team] = [ku.strip(), opp.strip()]
+	    continue
+    if null and team:
+	for team in getGamelist(gsplit=True).values():
+	    if team not in stats.keys():
+		stats[team] = [0, 0]
     return stats
 
 def getOverallScore(u):
