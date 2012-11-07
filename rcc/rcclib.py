@@ -210,6 +210,11 @@ def render_admin(user):
 	except Exception, e:
 	    cmd = 'MAIN'
 
+	if cmd == 'scores':
+	    with open('/usr/share/rcc/.scores') as f:
+		for line in f:
+		    print "<p>%s</p>" % line
+
 	if cmd == 'registerUser':
 	    upgrade = []
 	    keepers = []
