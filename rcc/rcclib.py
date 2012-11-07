@@ -11,6 +11,7 @@ with open('../.htpasswd', 'r') as f:
     for u in f.readlines():
 	userlist.append(u.split(':')[0])
 del u, f
+userlist.sort()
 
 def getDateEpoch(inDate):
     form = "%m/%d/%y %H:%M"
@@ -167,8 +168,8 @@ def render_viewStandings(user):
 			- players[player]['oppGuess'])
 		players[player]['adjScore'] = 100 -  abs( \
 			abs(tempVars['kuActual'] - players[player]['kuGuess']) \
-			- abs(tempVars['oppActual'] - players[player]['oppGuess']) \
-			- abs(tempVars['diff'] + players[player]['diff']))
+			+ abs(tempVars['oppActual'] - players[player]['oppGuess']) \
+			+ abs(tempVars['diff'] - players[player]['diff']))
 	    tempVars['players'] = players
 
     template = Template(file('viewStandings.html', 'r').read())
