@@ -82,6 +82,13 @@ def getMOTD():
     with open('/usr/share/rcc/motd', 'r') as f:
 	return f.read()
 
+def render_mailTo(user):
+    users = getUserlist()
+    email = []
+    for u in users.keys():
+	email.append(users[u]['email'])
+    print "<a href='mailto:%s'>Email all playsers</a>" % ','.join(email)
+
 def render_vote(user):
     try:
 	voteTime = time.time()
