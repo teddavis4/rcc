@@ -26,10 +26,10 @@
 		    </td>
 		    {% else %}
 		    <td>
-			<input type='text' value='{{userScores[gameInfo[time]][0]}}' name='{{ gameInfo[time] }} - {{ time }}'/>
+			<input type='text' value='{{userScores[gameInfo[time]][1]}}' name='{{ gameInfo[time] }} - {{ time }}'/>
 		    </td>
 		    <td>
-			<input type='text' value='{{userScores[gameInfo[time]][1]}}' name='{{ gameInfo[time] }} - {{ time }} - ku'/>
+			<input type='text' value='{{userScores[gameInfo[time]][0]}}' name='{{ gameInfo[time] }} - {{ time }} - ku'/>
 		    </td>
 		    {% endif %}
 		</tr>

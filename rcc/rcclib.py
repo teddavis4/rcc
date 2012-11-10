@@ -314,7 +314,6 @@ def render_admin(user):
 	    for line in lines:
 		lineNum = lines.index(line)
 		newScore = False
-		game = game.split()[0]
 		if line.startswith('[%s]' % game):
 		    team = True
 		elif line.startswith(user) and team:
