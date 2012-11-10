@@ -91,10 +91,12 @@ def render_mailTo(user):
 
 def render_vote(user):
     try:
+	expGames = getGamelist(exp=True)
 	voteTime = time.time()
 	form = cgi.FieldStorage()
 	for game in getGamelist():
 	    game = game.strip()
+	    if game not in expGames: continue
 	    opp = form[game].value
 	    ku = form['%s - ku'%game].value
 	    if ku == '0' or opp == '0' or ku == '' or opp == '':
