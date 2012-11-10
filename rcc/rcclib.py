@@ -92,7 +92,7 @@ def render_mailTo(user):
 def render_vote(user):
     try:
 	expGames = getGamelist(exp=True)
-	voteTime = time.time()
+	voteTime = time.strftime('%F %H:%M:%S')
 	form = cgi.FieldStorage()
 	for game in getGamelist():
 	    game = game.strip()
@@ -102,6 +102,9 @@ def render_vote(user):
 	    if ku == '0' or opp == '0' or ku == '' or opp == '':
 		continue
 	    else:
+		with open('/usr/share/rcc/.rawScores', 'a') as f:
+		    f.write("%s -- %s: %s, %s\n"% (voteTime, game, ku,
+			opp))
 		team = False
 		with open('/usr/share/rcc/.scores', 'r') as f:
 		    lines = f.readlines()
