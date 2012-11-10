@@ -170,6 +170,7 @@ def render_viewStandings(user):
 		players[player] = {}
 		players[player]['kuGuess'] = int(nline[1].split(',')[0])
 		players[player]['oppGuess'] = int(nline[1].split(',')[1])
+#    tempVars['diff'] = abs(tempVars['kuActual'] - tempVars['oppActual'])
 		players[player]['diff'] = \
 			abs(players[player]['kuGuess'] \
 			- players[player]['oppGuess'])
@@ -294,7 +295,6 @@ def render_admin(user):
 		lines = f.readlines()
 	    for line in lines:
 		lineNum = lines.index(line)
-		game = game.split()[0]
 		if line.startswith(game):
 		    lines[lineNum] = "%s:%s,%s\n" % (game, ku, opp)
 		    break
@@ -339,7 +339,7 @@ def render_admin(user):
 	template = Template(file('admin.html', 'r').read())
 		
 
-	print str(template.render(gamelist=getGamelist(),
+	print str(template.render(gamelist=getGamelist(gameOnly=True),
 	    userlist=userlist, newusers=getUserlist(new=True),
 	    motd=getMOTD()))
 
@@ -407,19 +407,28 @@ def getOverallScore(u):
 		if team == game:
 		    kuActual = int(line[1].split(',')[0])
 		    oppActual = int(line[1].split(',')[1])
-	diff = abs(kuActual - oppActual)
 	with open('/usr/share/rcc/.scores', 'r') as f:
-	    lines = f.readlines()
-	for line in lines:
-	    if line.startswith('[%s]'%game):
-		team = True
-	    elif line.startswith('['):
-		team = False
-	    elif team == True:
-		nline = line.split(':')
-		kuGuess = int(nline[1].split(',')[0])
-		oppGuess = int(nline[1].split(',')[1])
-		playerDiff = abs(kuGuess - oppGuess)
-		overallScore += (100-abs((kuActual+oppActual)-(kuGuess+oppGuess))-abs(diff+playerDiff))
-		break
+	    for line in f.readlines():
+		if line.startswith('[%s]'%game):
+		    team = True
+		elif line.startswith('['):
+		    team = False
+		elif team == True:
+		    nline = line.split(':')
+		    kuGuess = int(nline[1].split(',')[0])
+		    oppGuess = int(nline[1].split(',')[1])
+		#tempVars['diff'] = abs(tempVars['kuActual'] - tempVars['oppActual'])
+#		players[player]['diff'] = \
+	#			abs(players[player]['kuGuess'] \
+	#		- players[player]['oppGuess'])
+		    playerDiff = abs(oppGuess - kuGuess)
+		    diff = abs(kuActual - oppActual)
+#			abs(tempVars['kuActual'] - players[player]['kuGuess']) \
+#			+ abs(tempVars['oppActual'] - players[player]['oppGuess']) \
+#			+ abs(tempVars['diff'] - players[player]['diff']))
+		    overallScore += (100 \
+			    -abs(abs(kuActual-kuGuess) \
+			    +abs(oppActual-oppGuess) \
+			    +abs(diff-playerDiff)))
+		    break
     return overallScore
