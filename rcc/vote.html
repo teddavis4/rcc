@@ -19,10 +19,10 @@
 		    <td>{{ gameInfo[time] }}</td>
 		    {% if gameInfo[time] not in expGames %}
 		    <td>
-			{{ userScores[gameInfo[time]][0] }}
+			{{ userScores[gameInfo[time]][1] }}
 		    </td>
 		    <td>
-			{{ userScores[gameInfo[time]][1] }}
+			{{ userScores[gameInfo[time]][0] }}
 		    </td>
 		    {% else %}
 		    <td>
