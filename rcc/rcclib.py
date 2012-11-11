@@ -98,7 +98,9 @@ def render_vote(user):
 	    game = game.strip()
 	    if game not in expGames: continue
 	    opp = form[game].value
+	    opp = opp.strip()
 	    ku = form['%s - ku'%game].value
+	    ku = ku.strip()
 	    if ku == '0' or opp == '0' or ku == '' or opp == '':
 		continue
 	    else:
@@ -355,19 +357,29 @@ def render_groupStats(user):
     pass
 
 def render_stats(user):
-    t = {}
-    t['userGames'] = getUserGames(user)
-    t['games'] = getGamelist(gameOnly=True)
-    t['numGames'] = len(t['games'])
-    t['numPlayed'] = len(t['userGames'])
-    t['playPerc'] = "%0.2f" % (((0.00+t['numPlayed'])/t['numGames'])*100)
-    t['overallScore'] = getOverallScore(user)
-    for game in t['userGames']:
-	if game in t['games']:
-	    t['games'].pop(t['games'].index(game))
-    template = Template(file('playerStats.html', 'r').read())
-    print "<table width='100%' border=1>"
-    print str(template.render(user=user, **t))
+    u = user
+    print "<table class='sortable' width='100%' border=1>"
+    print """
+    <tr>
+	<th>Username</th>
+	<th>Games played</th>
+	<th>Total games</th>
+	<th>% of games played</th>
+	<th>Overall score</th>
+    </tr>"""
+    for user in userlist:
+	t = {}
+	t['userGames'] = getUserGames(user)
+	t['games'] = getGamelist(gameOnly=True)
+	t['numGames'] = len(t['games'])
+	t['numPlayed'] = len(t['userGames'])
+	t['playPerc'] = "%0.2f" % (((0.00+t['numPlayed'])/t['numGames'])*100)
+	t['overallScore'] = getOverallScore(user)
+	for game in t['userGames']:
+	    if game in t['games']:
+		t['games'].pop(t['games'].index(game))
+	template = Template(file('playerStats.html', 'r').read())
+	print str(template.render(u=u, user=user, **t))
     print "</table>"
 
 def render_(user):
@@ -419,20 +431,21 @@ def getOverallScore(u):
 		    team = False
 		elif team == True:
 		    nline = line.split(':')
-		    kuGuess = int(nline[1].split(',')[0])
-		    oppGuess = int(nline[1].split(',')[1])
-		#tempVars['diff'] = abs(tempVars['kuActual'] - tempVars['oppActual'])
+		    if u == nline[0]:
+			kuGuess = int(nline[1].split(',')[0])
+			oppGuess = int(nline[1].split(',')[1])
+		    #tempVars['diff'] = abs(tempVars['kuActual'] - tempVars['oppActual'])
 #		players[player]['diff'] = \
-	#			abs(players[player]['kuGuess'] \
-	#		- players[player]['oppGuess'])
-		    playerDiff = abs(oppGuess - kuGuess)
-		    diff = abs(kuActual - oppActual)
+	    #			abs(players[player]['kuGuess'] \
+	    #		- players[player]['oppGuess'])
+			playerDiff = abs(oppGuess - kuGuess)
+			diff = abs(kuActual - oppActual)
 #			abs(tempVars['kuActual'] - players[player]['kuGuess']) \
 #			+ abs(tempVars['oppActual'] - players[player]['oppGuess']) \
 #			+ abs(tempVars['diff'] - players[player]['diff']))
-		    overallScore += (100 \
-			    -abs(abs(kuActual-kuGuess) \
-			    +abs(oppActual-oppGuess) \
-			    +abs(diff-playerDiff)))
-		    break
+			overallScore += 100 - abs( \
+				-abs(abs(kuActual-kuGuess) \
+				+abs(oppActual-oppGuess) \
+				+abs(diff-playerDiff)))
+			break
     return overallScore
