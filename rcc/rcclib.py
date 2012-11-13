@@ -323,14 +323,14 @@ def render_admin(user):
 		newScore = False
 		if line.startswith('[%s]' % game):
 		    team = True
-		elif line.startswith(user) and team:
+		elif line.startswith(changeUser) and team:
 		    newScore = True
 		    lines[lineNum] = "%s:%s,%s\n" % (changeUser, ku,
 			    opp)
 		    break
 		elif line[0] == '[' and team:
 		    if not newScore:
-			lines.insert(lineNum, '%s:%s,%s\n'%(changeUser, ku,
+			lines.insert(lineNum+1, '%s:%s,%s\n'%(changeUser, ku,
 			    opp))
 			break
 	    with open('/usr/share/rcc/.scores', 'w') as f:
@@ -385,7 +385,8 @@ def render_(user):
 def deliverContent(qstring, user):
     exec('render_%s(user)' % qstring)
 
-#def getPlayerRank(user, score)
+def getPlayerRank(user, score):
+    pass
 
 def getUserGames(userToPoll, null=False):
     stats = {}
