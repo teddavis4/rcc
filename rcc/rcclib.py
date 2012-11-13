@@ -353,9 +353,6 @@ def render_userlist(user):
     template = Template(file('players.html', 'r').read())
     print str(template.render(players=getUserlist()))
 
-def render_groupStats(user):
-    pass
-
 def render_stats(user):
     u = user
     print "<table class='sortable' width='100%' border=1>"
@@ -387,6 +384,8 @@ def render_(user):
 
 def deliverContent(qstring, user):
     exec('render_%s(user)' % qstring)
+
+#def getPlayerRank(user, score)
 
 def getUserGames(userToPoll, null=False):
     stats = {}
