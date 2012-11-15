@@ -330,7 +330,7 @@ def render_admin(user):
 		    break
 		elif line[0] == '[' and team:
 		    if not newScore:
-			lines.insert(lineNum+1, '%s:%s,%s\n'%(changeUser, ku,
+			lines.insert(lineNum, '%s:%s,%s\n'%(changeUser, ku,
 			    opp))
 			break
 	    with open('/usr/share/rcc/.scores', 'w') as f:
