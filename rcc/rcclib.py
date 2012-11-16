@@ -46,7 +46,7 @@ def getGamelist(exp=False, over=False, gameOnly=False, gsplit=False):
 		    gamelist.append('%s%s'%(opp, date))
 	    elif over:
 		edate = getDateEpoch(rdate)
-		edate += (3600*4)
+		edate += (3600*2)
 		if time.time() > edate:
 		    gamelist.append('%s%s'%(opp, date))
 	    elif gsplit:
