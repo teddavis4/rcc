@@ -366,12 +366,12 @@ def render_stats(user):
     </tr>"""
     for user in userlist:
 	t = {}
-	t['userGames'] = getUserGames(user)
-	t['games'] = getGamelist(gameOnly=True)
+	t['userGames'] = getUserGames(user, over=True)
+	t['games'] = getGamelist(gameOnly=True, over=True)
 	t['numGames'] = len(t['games'])
 	t['numPlayed'] = len(t['userGames'])
 	t['playPerc'] = "%0.2f" % (((0.00+t['numPlayed'])/t['numGames'])*100)
-	t['overallScore'] = getOverallScore(user)
+	t['overallScore'] = "%0.1f" % getOverallScore(user)
 	for game in t['userGames']:
 	    if game in t['games']:
 		t['games'].pop(t['games'].index(game))
@@ -388,7 +388,7 @@ def deliverContent(qstring, user):
 def getPlayerRank(user, score):
     pass
 
-def getUserGames(userToPoll, null=False):
+def getUserGames(userToPoll, null=False, over=False):
     stats = {}
     team = None
     with open('/usr/share/rcc/.scores', 'r') as f:
@@ -398,12 +398,20 @@ def getUserGames(userToPoll, null=False):
 	newScore = False
 	if line.startswith('['):
 	    team = line.strip('[]\n')
-	elif line.startswith(userToPoll) and team:
+	elif line.startswith(userToPoll) and team and not over:
 	    scores = line.split(':')[1]
 	    ku = scores.split(',')[0]
 	    opp = scores.split(',')[1]
 	    stats[team] = [ku.strip(), opp.strip()]
 	    continue
+	elif line.startswith(userToPoll) and team and over:
+	    if team in getGamelist(over=True, gameOnly=True):
+		scores = line.split(':')[1]
+		ku = scores.split(',')[0]
+		opp = scores.split(',')[1]
+		stats[team] = [ku.strip(), opp.strip()]
+		continue
+
     if null and team:
 	for team in getGamelist(gsplit=True).values():
 	    if team not in stats.keys():
@@ -434,18 +442,12 @@ def getOverallScore(u):
 		    if u == nline[0]:
 			kuGuess = int(nline[1].split(',')[0])
 			oppGuess = int(nline[1].split(',')[1])
-		    #tempVars['diff'] = abs(tempVars['kuActual'] - tempVars['oppActual'])
-#		players[player]['diff'] = \
-	    #			abs(players[player]['kuGuess'] \
-	    #		- players[player]['oppGuess'])
 			playerDiff = abs(oppGuess - kuGuess)
 			diff = abs(kuActual - oppActual)
-#			abs(tempVars['kuActual'] - players[player]['kuGuess']) \
-#			+ abs(tempVars['oppActual'] - players[player]['oppGuess']) \
-#			+ abs(tempVars['diff'] - players[player]['diff']))
-			overallScore += 100 - abs( \
+			overallScore += (100.0 - abs( \
 				-abs(abs(kuActual-kuGuess) \
 				+abs(oppActual-oppGuess) \
-				+abs(diff-playerDiff)))
+				+abs(diff-playerDiff)))) / \
+				len(getUserGames(u, over=True))
 			break
     return overallScore
