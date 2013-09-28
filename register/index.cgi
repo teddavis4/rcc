@@ -1,9 +1,11 @@
 #!/usr/bin/python
 
-import os, sys, cgi, time, subprocess, cgitb
-import traceback
+import cgitb
+cgitb.enable(0, '/home/tdavis/python_logs')
 
-cgitb.enable(0, '/home/thedav4/python_logs')
+import os, sys, cgi, time, subprocess
+
+import traceback, psycopg2
 
 print "Content-type: text/html\n\n\n"
 print
@@ -62,7 +64,8 @@ elif cmd == 'registerUser':
 	state = form['state'].value
 	zipcode = form['zipcode'].value
     except Exception, e:
-	print "There was an error with the form data. Please make sure every form has been filled out"
+	print ("There was an error with the form data. Please make sure every "
+		"field has been filled out")
     else:
 	changePassword = changePassword.replace('\\', '\\\\')
 	changePassword = changePassword.replace('"', '\\"')
@@ -72,16 +75,18 @@ elif cmd == 'registerUser':
 
 	if changePassword == password2:
 	    try:
-		with open('/usr/share/rcc/.players.request', 'a') as f:
-		    f.write('[%s]\n'
-		    'Email Address:%s\n'
-		    'Mailing Address:\n'
-		    '\t%s\n'
-		    '\t%s\n'
-		    '\t%s, %s, %s\n' % (changeUser, emailAddress, 
-			fullName, street, city, state, zipcode))
-		subprocess.check_call(
-			'htpasswd -b /usr/share/rcc/.htpasswd.requests %s %s' % ( changeUser, changePassword), shell=True)
+		address = "%s, %s, %s %s" % (street, city, state, zipcode)
+		htpasswd = subprocess.check_output( 'htpasswd -nb %s %s' % 
+			( changeUser, changePassword), shell=True)
+		conn = psycopg2.connect("dbname=rcc user=tdavis "
+			"password=madman12 host=127.0.0.1")
+		cur = conn.cursor()
+		cur.execute("""INSERT INTO testrequests (name, email, username, 
+			htpasswd, address) VALUES (%s, %s, %s, %s, %s);""", 
+			(fullName, emailAddress, changeUser, htpasswd, address))
+		cur.close()
+		conn.commit()
+		conn.close()
 		print "Registration complate"
 		print "You will receive confirmation shortly"
 		print "<br/>"
