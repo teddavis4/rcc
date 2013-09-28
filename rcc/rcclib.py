@@ -33,7 +33,7 @@ def getGamelist(exp=False, over=False, gameOnly=False, gsplit=False):
     gamelist = []
     if gsplit:
 	gamelist = {}
-    with open('/usr/share/rcc/.gamelist.txt') as f:
+    with open('/usr/share/rcc/gamelist.txt') as f:
 	for i in f:
 	    opp = i.split(';')[0].strip()
 	    rdate = i.split(';')[1].strip()
@@ -380,6 +380,8 @@ def render_stats(user):
     print "</table>"
 
 def render_(user):
+    pass
+def render_None(user):
     pass
 
 def deliverContent(qstring, user):

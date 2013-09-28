@@ -4,7 +4,8 @@ import os, sys, time, cgi, cgitb, subprocess, traceback, crypt
 import rcclib
 from jinja2 import Template
 
-cgitb.enable(0, '/home/thedav4/python_logs')
+cgitb.enable(0, '/home/tdavis/python_logs')
+#cgitb.enable()
 
 print "Content-type: text/html"
 print
