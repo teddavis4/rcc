@@ -7,27 +7,26 @@
 	    <table border=1 class='sortable'>
 		<tr>
 		    <th>Opponent</th>
-		    <th>Opponent score guess</th>
-		    <th>Kansas score guess</th>
+		    <th>Score guess</th>
 		</tr>
-		{% for time in gameInfo.keys() %}
+		{% for team in expGames %}
 		<tr>
-		    <td>{{ gameInfo[time] }}</td>
-		    {% if gameInfo[time] not in expGames %}
+		    <td><b>{{team["time"]}} {{ team["team"] }}</b></td>
 		    <td>
-			{{ userScores[gameInfo[time]][1] }}
+			Kansas: {{ userScores[team["time"]][0] }}
+			<br />
+			{{team["team"]}}: {{ userScores[team["time"]][1] }}
 		    </td>
-		    <td>
-			{{ userScores[gameInfo[time]][0] }}
+		</tr>
+		{% endfor %}
+		{% for team in gameInfo %}
+		<tr>
+		    <td><b>{{team["time"]}} {{ team["team"] }}</b></td>
+		    <td align='right'>
+			Kansas: <input style="float:right;" type='text' value='{{userScores[team["time"]][0]}}' name='{{team["time"]}} - ku'/>
+			<br>
+			{{team["team"]}}: <input style="float:right;" type='text' value='{{userScores[team["time"]][1]}}' name='{{team["time"]}}'/>
 		    </td>
-		    {% else %}
-		    <td>
-			<input type='text' value='{{userScores[gameInfo[time]][1]}}' name='{{ gameInfo[time] }} - {{ time }}'/>
-		    </td>
-		    <td>
-			<input type='text' value='{{userScores[gameInfo[time]][0]}}' name='{{ gameInfo[time] }} - {{ time }} - ku'/>
-		    </td>
-		    {% endif %}
 		</tr>
 		{% endfor %}
 	    </table>

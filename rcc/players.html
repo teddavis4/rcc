@@ -1,5 +1,7 @@
 <table class='sortable' border=1  width='100%'>
     <tr>
+	<th class="sorttable_nosort">Remove player</th>
+	<th>Player</th>
 	<th>Username</th>
 	<th>Email Address</th>
 	<th>Address</th>
@@ -7,13 +9,23 @@
     {% for player in players.keys() %}
     <tr>
 	<td>
+	    <form action='/rcc/?delete' method='POST'>
+		<input type='hidden' name='user' 
+		value='{{ players[player]['name'] }}'>
+		<input type='submit' value='DELETE'>
+	    </form>
+	</td>
+	<td>
+	    {{ players[player]['name'] }}
+	</td>
+	<td>
 	    {{ player }}
 	</td>
 	<td>
 	    {{ players[player]['email'] }}
 	</td>
 	<td>
-	    {{ '<br/>'.join(players[player]['address']) }}
+	    {{ players[player]['address'] }}
 	</td>
 	{% endfor %}
     </tr>

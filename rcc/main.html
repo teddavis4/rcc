@@ -1,14 +1,60 @@
 <html>
     <head>
 	<script src="/sorttable.js"></script>
+	<style type='text/css'>
+	a {
+	    color: black;
+	    font-size: 16px;
+	    text-decoration: none;
+	}
+	body {
+	    background-color:#004065;
+	    font-family: "Comic Sans MS";
+	    color: #FFFFFF;
+	}
+	b { 
+	    font-size:18px;
+	}
+	table {
+	    width:65%;
+	    border: none;
+	    color: #000000;
+	}
+	th {
+	    padding: 8px;
+	    background-color: #FFC82D;
+	}
+	td { 
+	    padding: 8px; 
+	    background-color: #FFC82D;
+	}
+	.center {
+	    width:64.65%;
+	    background-color: #DAD6CB;
+	}
+	td.banner {
+	    background-image: url('images/banner.jpg');
+	    background-repeat:no-repeat;
+	    width: 692px;
+	    height: 125px;
+	    text-size: 24px;
+	    text-align: center;
+	}
+	a.banner {
+	    background-color:none ;
+	    color: black;
+	    font-size:26px;
+	}
+	</style>
     </head>
     <body>
-<table width='100%'>
+	<center>
+<table>
     <tr>
-	<td align='left' width='90%'>
-	    <h2> <a href='/rcc/index.cgi'>Rock Chalk Challenge 2013-2014</a></h2>
+	<td class='banner' align='left'>
+	    <a class="banner" href='/rcc/index.cgi'>Rock Chalk Challenge 2013-2014</a>
 	</td>
-	<td align='right' width='10%'>
+	<td align='right'>
 	    Logged in as: <a href='/rcc/?stats'>{{user}}</a>
 	    <a href='?prefs'>Preferences</a>
 	    {% if admin %}
@@ -35,10 +81,16 @@
 	    <a href='?standings'>View Standings</a>
 	    </center>
 	</td>
+	<td>
+	    <center>
+		<a href='/rcc/?stats'>Season Standings</a>
+	    </center>
+	</td>
     </tr>
 </table>
+{% if motd %}
 <br>
 <pre>
 {{ motd|wordwrap(width=78) }}
 </pre>
-<br><br>
+{% endif %}

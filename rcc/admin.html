@@ -3,19 +3,16 @@
 	width  80px;
 	height = 24px;
     }
-</style>
 
-<hr>
-<a href='/rcc/?userlist'>Player list</a>
-<hr>
+</style>
+<center class='center'>
+
+<br>
+<a href='/rcc/?userlist'>Player list</font></a>
+<br>
 <a href='/rcc/?mailTo'>Email all users</a>
-<hr>
-<form method='post'>
-    <input type='hidden' value='scores' name='cmd'/>
-    <input type='submit' value='Player scores'/>
-</form>
-<hr>
-<h2> Confirm new users </h2>
+<br>
+<h2> Confirm new player(s) </h2>
 <form method='post'>
     <input type='hidden' value='registerUser' name='cmd'/>
     <table width='100%'>
@@ -31,20 +28,20 @@
 		{{ newusers[newuser]['email'] }}
 	    </td>
 	    <td>
-		{{ '<br/>'.join(newusers[newuser]['address']) }}
+		{{ newusers[newuser]['address'] }}
 	    </td>
 	{% endfor %}
 	</tr>
     </table>
     <input type='submit' value='Activate!'/>
 </form>
-<hr>
+<br>
 <h2> Change player password </h2>
 <form method='post'>
     <input type='hidden' value='changePassword' name='cmd'/>
     <select id='cuser' name='cuser'>
-    {% for user in userlist %}
-	<option>{{ user }}</option>
+    {% for user in userlist|dictsort %}
+	<option>{{ user[0] }}</option>
     {% endfor %}
     </select>
     <br/>
@@ -52,46 +49,46 @@
     <input type='password' name='changePassword' />
     <input type='submit' value='Submit' />
 </form>
-<hr>
+<br>
 <h2> Enter game scores </h2>
 <form method='post'>
     <input type='hidden' value='enterScores' name='cmd' />
     <select id='game' name='game'>
     {% for game in gamelist %}
-	<option>{{ game }}</option>
+    <option value="{{game['time']}},{{game['team']}}">{{ game['time'] }} {{ game['team'] }}</option>
     {% endfor %}
     </select>
     <br/>
-    Opponent: 
-    <input type='text' value='0' name='opp' />
-    <br/>
     Kansas: 
     <input type='text' value='0' name='ku' />
+    <br/>
+    Opponent: 
+    <input type='text' value='0' name='opp' />
     <input type='submit' value='Submit' />
 </form>
-<hr>
+<br>
 <h2> Change player guesses </h2>
 <form method='post'>
     <input type='hidden' value='changeScores' name='cmd' />
     <select id='user' name='user'>
-    {% for user in userlist %}
-	<option>{{ user }}</option>
+    {% for user in userlist|dictsort %}
+	<option>{{ user[0] }}</option>
     {% endfor %}
     </select>
     <select id='game' name='game'>
     {% for game in gamelist %}
-	<option>{{ game }}</option>
+    <option value="{{game['time']}},{{game['team']}}">{{ game['time'] }} {{ game['team'] }}</option>
     {% endfor %}
     </select>
     <br/>
-    Opponent: 
-    <input type='text' value='0' name='opp' />
-    <br/>
     Kansas: 
     <input type='text' value='0' name='ku' />
+    <br/>
+    Opponent: 
+    <input type='text' value='0' name='opp' />
     <input type='submit' value='Submit' />
 </form>
-<hr>
+<br>
 <h2> Change the Message Of The Day </h2>
 <form method='post'>
     <input type='hidden' value='writeMOTD' name='cmd' />
@@ -99,4 +96,5 @@
     <br/>
     <input type='submit' value='change motd' />
 </form>
-<hr>
+<br>
+</center>

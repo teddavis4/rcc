@@ -28,7 +28,7 @@ if not cmd:
 	Email Address:
 	<input type='text' value='' name='email' />
 	<br/>
-	Stree address:
+	Street address:
 	<input type='text' value='' name='street' />
 	<br/>
 	City:
@@ -40,7 +40,7 @@ if not cmd:
 	Zip code:
 	<input type='text' value='' name='zipcode' />
 	<br/>
-	Username: 
+	Username (case sensitve): 
 	<input type='text' value='Username' name='user' />
 	<br/>
 	New password:
@@ -78,17 +78,20 @@ elif cmd == 'registerUser':
 		address = "%s, %s, %s %s" % (street, city, state, zipcode)
 		htpasswd = subprocess.check_output( 'htpasswd -nb %s %s' % 
 			( changeUser, changePassword), shell=True)
+		htpasswd = htpasswd.strip()
 		conn = psycopg2.connect("dbname=rcc user=tdavis "
 			"password=madman12 host=127.0.0.1")
 		cur = conn.cursor()
-		cur.execute("""INSERT INTO testrequests (name, email, username, 
+		cur.execute("""INSERT INTO userrequests (name, email, username, 
 			htpasswd, address) VALUES (%s, %s, %s, %s, %s);""", 
 			(fullName, emailAddress, changeUser, htpasswd, address))
 		cur.close()
 		conn.commit()
 		conn.close()
 		print "Registration complate"
-		print "You will receive confirmation shortly"
+		print ("Your registration is awaiting approval by an "
+			"adminstrator. If you are approved you will receive an "
+			"email")
 		print "<br/>"
 		print "<a href='/'> Home</a?"
 	    except:

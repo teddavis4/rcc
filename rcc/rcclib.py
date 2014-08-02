@@ -1,6 +1,8 @@
 #!/usr/bin/python
 
 import os, sys, time, cgi, cgitb, subprocess, traceback, crypt
+import psycopg2
+from datetime import tzinfo, timedelta, datetime
 from jinja2 import Template
 
 adminList = ['tdavis', 'ddavis']
@@ -24,59 +26,55 @@ def getGamelist(exp=False, over=False, gameOnly=False, gsplit=False):
     Return a list of games with their dates and times
 
     exp -- If set to true, skips games that have passed (False)
-    over -- If set to true, only adds games which 4 hours have elapsed
+    over -- If set to true, only adds games which 2 hours have elapsed
 	    since their start
     gameOnly -- Only return the games, no times or dates
     gsplit -- Split the opposing team and time into a dictionary
     """
 
     gamelist = []
-    if gsplit:
-	gamelist = {}
-    with open('/usr/share/rcc/gamelist.txt') as f:
-	for i in f:
-	    opp = i.split(';')[0].strip()
-	    rdate = i.split(';')[1].strip()
-	    date = " - %s" % rdate
-	    if gameOnly:
-		date = ''
-	    if exp:
-		edate = getDateEpoch(rdate)
-		if time.time() < edate:
-		    gamelist.append('%s%s'%(opp, date))
-	    elif over:
-		edate = getDateEpoch(rdate)
-		edate += (3600*1.5)
-		if time.time() > edate:
-		    gamelist.append('%s%s'%(opp, date))
-	    elif gsplit:
-		gamelist[rdate] = opp
-	    else:
-		gamelist.append('%s%s'%(opp, date))
+    conn = psycopg2.connect("dbname=rcc user=tdavis password=madman12 "
+	    "host=127.0.0.1")
+    cur = conn.cursor()
+    if exp:
+	cur.execute("SELECT * FROM games WHERE time + interval '5m' <= "
+		"'now';")
+    elif over:
+	cur.execute("SELECT * FROM games WHERE time + interval '2h' <= "
+		"'now';")
+    else:
+	cur.execute("SELECT * FROM games;")
+    for game in cur.fetchall():
+	if gameOnly:
+	    gamelist.append({"team": game[0]})
+	else:
+	    gamelist.append({"team": game[0], 
+		"time": game[1].astimezone(CST()).strftime("%Y-%m-%d %H:%M:%S")})
+    cur.close()
+    conn.close()
     return gamelist
 
 def getUserlist(new=False):
     # Find playings requesting access
-    userFile = '.players'
+    userSource = "userlist"
     if new:
-	userFile = '.players.request'
-    newusers = {}
-    with open(os.path.join('/usr/share/rcc/', userFile), 'r') as f:
-	newuser = None
-	for line in f:
-	    if line.startswith('['):
-		newuser = line.strip('[]\n')
-		newusers[newuser] = {}
-	    elif line.startswith('Email Address') and newuser:
-		newusers[newuser]['email'] = line.split(':')[1].rstrip()
-	    elif line.startswith('Mailing Address') and newuser:
-		newusers[newuser]['address'] = []
-	    elif line.startswith('\t'):
-		try:
-		    newusers[newuser]['address'].append(line.strip()) 
-		except Exception, e:
-		    pass
-    return newusers
+	userSource = "userrequests"
+    users = {}
+    conn = psycopg2.connect("dbname=rcc user=tdavis password=madman12 "
+	    "host=127.0.0.1")
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM %s;"%(userSource))
+    for user in cur.fetchall():
+	users[user[0]] = {
+		'username' : user[0],
+		'htpasswd' : user[1],
+		'name' : user[2],
+		'email' : user[3],
+		'address' : user[4]
+		}
+    cur.close()
+    conn.close()
+    return users
 
 def getMOTD():
     with open('/usr/share/rcc/motd', 'r') as f:
@@ -89,53 +87,121 @@ def render_mailTo(user):
 	email.append(users[u]['email'])
     print "<a href='mailto:%s'>Email all playsers</a>" % ','.join(email)
 
+class CST(tzinfo):
+    def utcoffset(self, dt):
+	return timedelta(hours=-6)
+    def dst(self, dt):
+	return timedelta(0)
+    def tzname(self, dt):
+	return "America/Chicago"
+
+class PST(tzinfo):
+    def utcoffset(self, dt):
+	return timedelta(hours=-8)
+    def dst(self, dt):
+	return timedelta(0)
+    def tzname(self, dt):
+	return "America/Los_Angeles"
+
+#def render_testvote(user):
+#    try:
+#	expGames = getGamelist(exp=True)
+#	voteTime = datetime.now(CST()).isoformat()
+#	form = cgi.FieldStorage()
+#	for game in getGamelist():
+#	    if game["time"] in [g['time'] for g in expGames]: 
+#		continue
+#	    team = game["team"].strip()
+#	    gametime = game["time"].strip()
+#	    opp = form[gametime].value
+#	    opp = opp.strip()
+#	    ku = form['%s - ku'%gametime].value
+#	    ku = ku.strip()
+#	    if ku == '0' or opp == '0' or ku == '' or opp == '':
+#		continue
+#	    else:
+#		conn = psycopg2.connect("dbname=rcc user=tdavis "
+#			"password=madman12 host=127.0.0.1")
+#		cur = conn.cursor()
+#		cur.execute("SELECT * FROM scores WHERE username=%s "
+#			"AND gametime=%s;", (user, gametime))
+#		if cur.fetchone():
+#		    cur.execute("UPDATE scores SET opp=%s, ku=%s, "
+#			    "time=%s WHERE username=%s AND "
+#			    "gametime=%s;", (opp, ku, voteTime, user, gametime))
+#		else:
+#		    cur.execute("INSERT INTO scores (username, team, opp, "
+#			    "ku, time, gametime) VALUES (%s, %s, %s, %s, %s, "
+#			    "%s);", (user, team, opp, ku, voteTime, gametime))
+#		cur.close()
+#		conn.commit()
+#		conn.close()
+#		print "Scores collected: KU: %s, %s: %s<br/>"%(ku, game["team"], opp)
+#    except KeyError:
+#	print "Click 'Opponent' to sort"
+#	ended = {}
+#	template = Template(file('vote.html', 'r').read())
+#	vars = {"userScores": getUserGames(user, null=True), 
+#		"gameInfo": getGamelist(gsplit=True), 
+#		"expGames": getGamelist(exp=True)
+#		#[g["team"] for g in getGamelist(exp=True, gameOnly=True)]
+#		}
+#	for game in vars["gameInfo"]:
+#	    if game in vars["expGames"]:
+#		del(vars["gameInfo"][game])
+#	print str(template.render(**vars))
+#    except Exception, e:
+#	print '<pre>'
+#	print traceback.format_exc()
+#	print '</pre>'
+
 def render_vote(user):
     try:
 	expGames = getGamelist(exp=True)
-	voteTime = time.strftime('%F %H:%M:%S')
+	voteTime = datetime.now(CST()).isoformat()
 	form = cgi.FieldStorage()
 	for game in getGamelist():
-	    game = game.strip()
-	    if game not in expGames: continue
-	    opp = form[game].value
+	    if game["time"] in [g['time'] for g in expGames]: 
+		continue
+	    team = game["team"].strip()
+	    gametime = game["time"].strip()
+	    opp = form[gametime].value
 	    opp = opp.strip()
-	    ku = form['%s - ku'%game].value
+	    ku = form['%s - ku'%gametime].value
 	    ku = ku.strip()
 	    if ku == '0' or opp == '0' or ku == '' or opp == '':
 		continue
 	    else:
-		with open('/usr/share/rcc/.rawScores', 'a') as f:
-		    f.write("%s -- %s: %s, %s\n"% (voteTime, game, ku,
-			opp))
-		team = False
-		with open('/usr/share/rcc/.scores', 'r') as f:
-		    lines = f.readlines()
-		for line in lines:
-		    lineNum = lines.index(line)
-		    newScore = False
-		    if line.startswith('[%s]' % game.split(' - ')[0]):
-			team = True
-		    elif line.startswith(user) and team:
-			newScore = True
-			lines[lineNum] = "%s:%s,%s\n" % (user, ku,
-				opp)
-			break
-		    elif line[0] == '[' and team:
-			if not newScore:
-			    lines.insert(lineNum, '%s:%s,%s\n'%(user, ku,
-				opp))
-			    break
-		with open('/usr/share/rcc/.scores', 'w') as f:
-		    for line in lines:
-			f.write("%s" % line)
-		print "Scores collected: %s KU: %s, %s: %s<br/>"%(game,
-			ku, game.split(' - ')[0].split(' ', 1)[1], opp)
+		conn = psycopg2.connect("dbname=rcc user=tdavis "
+			"password=madman12 host=127.0.0.1")
+		cur = conn.cursor()
+		cur.execute("SELECT * FROM scores WHERE username=%s "
+			"AND gametime=%s;", (user, gametime))
+		if cur.fetchone():
+		    cur.execute("UPDATE scores SET opp=%s, ku=%s, "
+			    "time=%s WHERE username=%s AND "
+			    "gametime=%s;", (opp, ku, voteTime, user, gametime))
+		else:
+		    cur.execute("INSERT INTO scores (username, team, opp, "
+			    "ku, time, gametime) VALUES (%s, %s, %s, %s, %s, "
+			    "%s);", (user, team, opp, ku, voteTime, gametime))
+		cur.close()
+		conn.commit()
+		conn.close()
+		print "Scores collected: KU: %s, %s: %s<br/>"%(ku, game["team"], opp)
     except KeyError:
 	print "Click 'Opponent' to sort"
+	ended = {}
 	template = Template(file('vote.html', 'r').read())
-	print str(template.render(userScores=getUserGames(user,
-	    null=True),gameInfo=getGamelist(gsplit=True),
-	    expGames=getGamelist(exp=True, gameOnly=True)))
+	vars = {"userScores": getUserGames(user, null=True), 
+		"gameInfo": getGamelist(), 
+		"expGames": getGamelist(exp=True)
+		#[g["team"] for g in getGamelist(exp=True, gameOnly=True)]
+		}
+	for game in vars["gameInfo"][:]:
+	    if game in vars["expGames"]:
+		del(vars["gameInfo"][vars['gameInfo'].index(game)])
+	print str(template.render(**vars))
     except Exception, e:
 	print '<pre>'
 	print traceback.format_exc()
@@ -146,46 +212,41 @@ def render_standings(user):
     print str(template.render(gamelist=getGamelist(over=True)))
 
 def render_viewStandings(user):
+    conn = psycopg2.connect("dbname=rcc user=tdavis password=madman12 "
+	    "host=127.0.0.1")
+    cur = conn.cursor()
+    games = getGamelist(over=True)
     form = cgi.FieldStorage()
     game = form['game'].value
-    team = None
-    kuActual = None
-    oppActual = None
-    kuGuess = None
-    oppGuess = None
     tempVars = {'user': user, 'game': game}
+    players = {}
 
-    with open('/usr/share/rcc/.actualScores.txt', 'r') as f:
-	for line in f.readlines():
-	    line = line.split(':')
-	    team = line[0]
-	    if team == game:
-		tempVars['kuActual'] = int(line[1].split(',')[0])
-		tempVars['oppActual'] = int(line[1].split(',')[1])
-    tempVars['diff'] = abs(tempVars['kuActual'] - tempVars['oppActual'])
-    with open('/usr/share/rcc/.scores', 'r') as f:
-	lines = f.readlines()
-	players = {}
-	for line in lines:
-	    if line.startswith('[%s]'%game):
-		team = True
-	    elif line.startswith('['):
-		team = False
-	    elif team == True:
-		nline = line.split(':')
-		player = nline[0]
-		players[player] = {}
-		players[player]['kuGuess'] = int(nline[1].split(',')[0])
-		players[player]['oppGuess'] = int(nline[1].split(',')[1])
-#    tempVars['diff'] = abs(tempVars['kuActual'] - tempVars['oppActual'])
-		players[player]['diff'] = \
-			abs(players[player]['kuGuess'] \
-			- players[player]['oppGuess'])
-		players[player]['adjScore'] = 100 -  abs( \
-			abs(tempVars['kuActual'] - players[player]['kuGuess']) \
-			+ abs(tempVars['oppActual'] - players[player]['oppGuess']) \
-			+ abs(tempVars['diff'] - players[player]['diff']))
-	    tempVars['players'] = players
+    cur.execute("SELECT * FROM gamescores WHERE time='%s';"%(game+" -06"))
+    score = cur.fetchone()
+    tempVars['kuActual'] = score[1]
+    tempVars['oppActual'] = score[2]
+    tempVars['diff'] = tempVars['kuActual'] - tempVars['oppActual']
+
+    for player in getUserlist():
+	players[player] = {}
+	cur.execute("SELECT * FROM scores WHERE username=%s AND "
+	    "gametime=%s;", (player, game))
+	score = cur.fetchone()
+	if not score:
+	    continue
+	try:
+	    players[player]['oppGuess'] = score[2]
+	    players[player]['kuGuess'] = score[3]
+	    players[player]['diff'] = players[player]['kuGuess'] \
+		    - players[player]['oppGuess']
+	    players[player]['adjScore'] = 100 -  abs( \
+		    abs(tempVars['kuActual'] - players[player]['kuGuess']) \
+		    + abs(tempVars['oppActual'] - players[player]['oppGuess']) \
+		    + abs(tempVars['diff'] - players[player]['diff']))
+	except Exception, e:
+	    pass
+    tempVars['players'] = players
+
 
     template = Template(file('viewStandings.html', 'r').read())
     print str(template.render(**tempVars))
@@ -210,7 +271,9 @@ def render_prefs(user):
 
 	if changePassword == password2:
 	    try:
-		subprocess.check_call('htpasswd -b /home/thedav4/kurcc.com/.htpasswd %s %s' % ( changeUser, changePassword), shell=True)
+		subprocess.check_call('htpasswd -b '
+			'/home/tdavis/site/rcc/.htpasswd %s %s' % ( changeUser,
+			    changePassword), shell=True)
 		print "Password Changed"
 	    except:
 		print "<pre>%s</pre>"%(cgi.escape(traceback.format_exc()))
@@ -218,6 +281,9 @@ def render_prefs(user):
 	    print "Passwords did not match"
 
 def render_admin(user):
+    conn = psycopg2.connect("dbname=rcc user=tdavis password=madman12 "
+	    "host=127.0.0.1")
+    cur = conn.cursor()
     if user in adminList:
 	form = cgi.FieldStorage()
 
@@ -226,59 +292,42 @@ def render_admin(user):
 	except Exception, e:
 	    cmd = 'MAIN'
 
-	if cmd == 'scores':
-	    with open('/usr/share/rcc/.scores') as f:
-		for line in f:
-		    print "<p>%s</p>" % line
-
-	if cmd == 'registerUser':
-	    upgrade = []
-	    keepers = []
+	if cmd == 'denyUser':
 	    users = form['newuser']
 	    try:
 		if len(users)>1:
 		    pass
 		else:
-		    users = [form['newuesr']]
+		    users = [form['newuser']]
 	    except Exception, e:
 		users = [form['newuser']]
-	    for u in users:
-		newuser = u.value
-		with open('/usr/share/rcc/.htpasswd.requests', 'r') as f:
-		    for line in f:
-			keepers.append(line)
-			if line.startswith('%s:'%newuser):
-			    if newuser not in upgrade:
-				upgrade.append(line)
+	    for newuser in users:
+		cur.execute("DELETE FROM userrequests WHERE username='%s'"%
+			newuser.value)
 
-		with open('../.htpasswd', 'a') as f:
-		    for newuser in upgrade:
-			if newuser not in userlist:
-			    f.write(newuser)
-	    keepers = [i for i in keepers if i not in upgrade]
-	    with open('/usr/share/rcc/.htpasswd.requests', 'w') as f:
-		for u in keepers:
-		    f.write(u)
-	    with open('/usr/share/rcc/.players.request', 'r') as f:
-		gather=True
-		keepline = []
-		moveline = []
-		for line in f:
-		    if line.startswith('['):
-			if line.strip('[]\n') == newuser:
-			    gather=False
-			if line.strip('[]\n') != newuser:
-			    gather=True
-		    if gather:
-			keepline.append(line)
-		    else:
-			moveline.append(line)
-	    with open('/usr/share/rcc/.players.request', 'w') as f:
-		for i in keepline:
-		    f.write(i)
-	    with open('/usr/share/rcc/.players', 'a') as f:
-		for i in moveline:
-		    f.write(i)
+	if cmd == 'registerUser':
+	    users = form['newuser']
+	    try:
+		if len(users)>1:
+		    pass
+		else:
+		    users = [form['newuser']]
+	    except Exception, e:
+		users = [form['newuser']]
+	    for newuser in users:
+		cur.execute("SELECT * FROM userrequests WHERE username=%s;",
+			(newuser.value, ))
+		user = cur.fetchone()
+		if user:
+		    cur.execute("INSERT INTO userlist (username, htpasswd, name, "
+			    "email, address) VALUES (%s, %s, %s, %s, %s);",
+			    (user[0], user[1], user[2], user[3], user[4]))
+		    cur.execute("DELETE FROM userrequests WHERE username='%s';"% (user[0]))
+		    subprocess.check_call('htpasswd -b '
+			    '/home/tdavis/site/rcc/.htpasswd %s %s' % 
+			    ( user[0], user[1]), shell=True)
+		    with open("/home/tdavis/requests", "a") as f:
+			f.write("%s\n"%user[3])
 
 	if cmd == 'changePassword':
 	    changeUser = form['cuser'].value
@@ -289,7 +338,9 @@ def render_admin(user):
 	    changePassword = changePassword.replace(' ','\\ ')
 
 	    try:
-		subprocess.check_call('htpasswd -b /home/thedav4/kurcc.com/.htpasswd %s %s' % ( changeUser, changePassword), shell=True)
+		subprocess.check_call('htpasswd -b '
+			'/home/tdavis/site/rcc/.htpasswd %s %s' % ( changeUser,
+			    changePassword), shell=True)
 		print "Password Changed"
 	    except:
 		print "<pre>%s</pre>"%(cgi.escape(traceback.format_exc()))
@@ -298,44 +349,43 @@ def render_admin(user):
 	    ku = form['ku'].value
 	    opp = form['opp'].value
 	    game = form['game'].value
-	    with open('/usr/share/rcc/.actualScores.txt', 'r') as f:
-		lines = f.readlines()
-	    for line in lines:
-		lineNum = lines.index(line)
-		if line.startswith(game):
-		    lines[lineNum] = "%s:%s,%s\n" % (game, ku, opp)
-		    break
-	    with open('/usr/share/rcc/.actualScores.txt', 'w') as f:
-		for line in lines:
-		    f.write("%s" % line)
+	    gametime = str(game.split(',')[0]+" -0600")
+	    game = game.split(',')[1]
+	    cur.execute("SELECT * FROM gamescores;")
+	    games = cur.fetchall()
+	    if gametime in [g[3] for g in games]:
+		cur.execute("UPDATE gamescores SET team=%s, opp=%s, ku=%s, "
+			"WHERE time=%s", (game, opp, ku, gametime))
+	    else:
+		cur.execute("INSERT INTO gamescores (team, opp, ku, time) "
+			"VALUES (%s, %s, %s, %s);", (game, opp, ku, gametime))
 	    print "Scores collected, thank you"
 	    
 	if cmd == 'changeScores':
+	    pass
 	    changeUser = form['user'].value
 	    ku = form['ku'].value
 	    opp = form['opp'].value
 	    game = form['game'].value
-	    team = False
-	    with open('/usr/share/rcc/.scores', 'r') as f:
-		lines = f.readlines()
-	    for line in lines:
-		lineNum = lines.index(line)
-		newScore = False
-		if line.startswith('[%s]' % game):
-		    team = True
-		elif line.startswith(changeUser) and team:
-		    newScore = True
-		    lines[lineNum] = "%s:%s,%s\n" % (changeUser, ku,
-			    opp)
-		    break
-		elif line[0] == '[' and team:
-		    if not newScore:
-			lines.insert(lineNum, '%s:%s,%s\n'%(changeUser, ku,
-			    opp))
-			break
-	    with open('/usr/share/rcc/.scores', 'w') as f:
-		for line in lines:
-		    f.write("%s" % line)
+	    gametime = game.split(',')[0]
+	    game = game.split(',')[1]
+
+	    conn = psycopg2.connect("dbname=rcc user=tdavis "
+		    "password=madman12 host=127.0.0.1")
+	    cur = conn.cursor()
+	    cur.execute("SELECT * FROM scores WHERE username=%s "
+		    "AND gametime=%s;", (changeUser, gametime))
+	    if cur.fetchone():
+		cur.execute("UPDATE scores SET opp=%s, ku=%s "
+			"WHERE gametime=%s AND username=%s;", (opp, ku, 
+			    gametime, changeUser))
+	    else:
+		cur.execute("INSERT INTO scores (username, team, opp, ku, "
+			"gametime) VALUES (%s, %s, %s, %s, %s);", (changeUser, 
+			    game, opp, ku, gametime))
+	    cur.close()
+	    conn.commit()
+	    conn.close()
 	    print "Scores collected, thank you"
 	if cmd == 'writeMOTD':
 	    newMotd = form['motd'].value
@@ -345,13 +395,41 @@ def render_admin(user):
 	template = Template(file('admin.html', 'r').read())
 		
 
-	print str(template.render(gamelist=getGamelist(gameOnly=True),
-	    userlist=userlist, newusers=getUserlist(new=True),
+	print str(template.render(gamelist=getGamelist(),
+	    userlist=getUserlist(), newusers=getUserlist(new=True),
 	    motd=getMOTD()))
+    cur.close()
+    conn.commit()
+    conn.close()
+
+def render_delete(user):
+    form = cgi.FieldStorage()
+    user = form['user'].value
+
+    conn = psycopg2.connect("dbname=rcc user=tdavis password=madman12 "
+	    "host=127.0.0.1")
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM userlist WHERE username='%s';"%user)
+    if cur.fetchone():
+	cur.execute("DELETE FROM userlist WHERE username='%s';"%user)
+	subprocess.check_call('htpasswd -D /home/tdavis/site/rcc/.htpasswd %s' % 
+		( user), shell=True)
+	print "Successfully deleted %s" % user
+    else:
+	pass
+	
+    cur.close()
+    conn.commit()
+    conn.close()
+
+
 
 def render_userlist(user):
-    template = Template(file('players.html', 'r').read())
-    print str(template.render(players=getUserlist()))
+    if user not in adminList:
+	pass
+    else:
+	template = Template(file('players.html', 'r').read())
+	print str(template.render(players=getUserlist()))
 
 def render_stats(user):
     u = user
@@ -362,14 +440,15 @@ def render_stats(user):
 	<th>Games played</th>
 	<th>Total games</th>
 	<th>% of games played</th>
-	<th>Overall score</th>
+	<th>Season average</th>
     </tr>"""
-    for user in userlist:
+    for user in getUserlist():
 	t = {}
 	t['userGames'] = getUserGames(user, over=True)
 	t['games'] = getGamelist(gameOnly=True, over=True)
 	t['numGames'] = len(t['games'])
 	t['numPlayed'] = len(t['userGames'])
+	if not t['numGames']: continue
 	t['playPerc'] = "%0.2f" % (((0.00+t['numPlayed'])/t['numGames'])*100)
 	t['overallScore'] = "%0.1f" % getOverallScore(user)
 	for game in t['userGames']:
@@ -392,64 +471,79 @@ def getPlayerRank(user, score):
 
 def getUserGames(userToPoll, null=False, over=False):
     stats = {}
-    team = None
-    with open('/usr/share/rcc/.scores', 'r') as f:
-	lines = f.readlines()
-    for line in lines:
-	lineNum = lines.index(line)
-	newScore = False
-	if line.startswith('['):
-	    team = line.strip('[]\n')
-	elif line.startswith(userToPoll) and team and not over:
-	    scores = line.split(':')[1]
-	    ku = scores.split(',')[0]
-	    opp = scores.split(',')[1]
-	    stats[team] = [ku.strip(), opp.strip()]
-	    continue
-	elif line.startswith(userToPoll) and team and over:
-	    if team in getGamelist(over=True, gameOnly=True):
-		scores = line.split(':')[1]
-		ku = scores.split(',')[0]
-		opp = scores.split(',')[1]
-		stats[team] = [ku.strip(), opp.strip()]
-		continue
+    conn = psycopg2.connect("dbname=rcc user=tdavis password=madman12 "
+	    "host=127.0.0.1")
+    cur = conn.cursor()
+    if over:
+	cur.execute("SELECT * FROM games WHERE time + interval '2h'<='now';")
+	teams = cur.fetchall()
+	for gametime in [t[1].astimezone(CST()).strftime("%Y-%m-%d %H:%M:%S") for t in teams]:
+	    cur.execute("SELECT * FROM scores WHERE username=%s AND "
+		"gametime=%s;", (userToPoll, gametime))
+	    game = cur.fetchone()
+	    if not game: continue
+	    try:
+		opp = game[2]
+		ku = game[3]
+		stats[gametime] = [ku, opp]
+	    except:
+		pass
+    else:
+	cur.execute("SELECT * FROM games;")
+	teams = cur.fetchall()
+	for gametime in [t[1].astimezone(CST()).strftime("%Y-%m-%d %H:%M:%S") for t in teams]:
+	    cur.execute("SELECT * FROM scores WHERE username=%s AND "
+		"gametime=%s;", (userToPoll, gametime))
+	    game = cur.fetchone()
+	    try:
+		opp = game[2]
+		ku = game[3]
+		stats[gametime] = [ku, opp]
+	    except:
+		pass
+    if null:
+	cur.execute("SELECT * FROM games;")
+	teams = cur.fetchall()
+	for gametime in [t[1].astimezone(CST()).strftime("%Y-%m-%d %H:%M:%S") for t in teams]:
+	    #for team in getGamelist(gsplit=True).values():
+	    if gametime not in stats.keys():
+		stats[gametime] = [0, 0]
 
-    if null and team:
-	for team in getGamelist(gsplit=True).values():
-	    if team not in stats.keys():
-		stats[team] = [0, 0]
+    cur.close()
+    conn.close()
     return stats
 
 def getOverallScore(u):
-    games = getGamelist(gameOnly=True, over=True)
+    conn = psycopg2.connect("dbname=rcc user=tdavis password=madman12 "
+	    "host=127.0.0.1")
+    cur = conn.cursor()
+    games = getGamelist(over=True)
     kuActual=0
     oppActual=0
     overallScore = 0
     for game in games:
-	with open('/usr/share/rcc/.actualScores.txt', 'r') as f:
-	    for line in f.readlines():
-		line = line.split(':')
-		team = line[0]
-		if team == game:
-		    kuActual = int(line[1].split(',')[0])
-		    oppActual = int(line[1].split(',')[1])
-	with open('/usr/share/rcc/.scores', 'r') as f:
-	    for line in f.readlines():
-		if line.startswith('[%s]'%game):
-		    team = True
-		elif line.startswith('['):
-		    team = False
-		elif team == True:
-		    nline = line.split(':')
-		    if u == nline[0]:
-			kuGuess = int(nline[1].split(',')[0])
-			oppGuess = int(nline[1].split(',')[1])
-			playerDiff = abs(oppGuess - kuGuess)
-			diff = abs(kuActual - oppActual)
-			overallScore += (100.0 - abs( \
-				-abs(abs(kuActual-kuGuess) \
-				+abs(oppActual-oppGuess) \
-				+abs(diff-playerDiff)))) / \
-				len(getUserGames(u, over=True))
-			break
-    return overallScore
+	cur.execute("SELECT * FROM gamescores WHERE time='%s';"%
+		(str(game['time']+" -06")))
+	curgame = cur.fetchone()
+	if not curgame: 
+	    continue
+	kuActual = curgame[1]
+	oppActual = curgame[2]
+
+	cur.execute("SELECT * FROM scores WHERE username=%s AND gametime=%s", 
+		(u, game['time']))
+	curuser = cur.fetchone()
+	if not curuser: 
+	    continue
+	kuGuess = curuser[3]
+	oppGuess = curuser[2]
+	playerDiff = kuGuess - oppGuess
+	diff = kuActual - oppActual
+	overallScore += (100.0 - abs( \
+		-abs(abs(kuActual-kuGuess) \
+		+abs(oppActual-oppGuess) \
+		+abs(diff-playerDiff))))
+    if overallScore == 0:
+	return 0.0
+
+    return overallScore / len(getUserGames(u, over=True))

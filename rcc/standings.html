@@ -1,7 +1,7 @@
 <form action='/rcc/index.cgi?viewStandings' method='post'>
     <select name='game' id='game'>
 	{% for i in gamelist %}
-	<option>{{ i.split(' - ')[0] }}</option>
+	<option value="{{ i['time'] }}">{{i['time']}} {{ i['team'] }}</option>
 	{% endfor %}
     </select>
     <br/>
